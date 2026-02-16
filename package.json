@@ -12,6 +12,8 @@
     "MagicMirror²",
     "Weather",
     "Alerts",
+    "WeatherAPI",
+    "WeatherAPI.com",
     "OpenWeatherMap"
   ],
   "author": "Gary Jones",

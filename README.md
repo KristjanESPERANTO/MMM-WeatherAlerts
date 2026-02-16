@@ -2,9 +2,23 @@
 
 This is a module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror).
 
-Displays active weather alerts as provided by the [OpenWeatherMap One Call API 3.0](https://openweathermap.org/api/one-call-3). Module will not be visible when no alerts are active.
+Displays active weather alerts as provided by weather APIs. Module will not be visible when no alerts are active.
 
-**Note:** This module requires OpenWeatherMap One Call API 3.0, which requires a paid subscription. The older free version 2.5 has been discontinued by OpenWeatherMap and is no longer supported.
+## Supported Weather Providers
+
+### WeatherAPI.com ⭐ (Recommended)
+- **Coverage:** Worldwide
+- **Cost:** FREE (up to 1,000,000 calls/month)
+- **API Key:** [Get free API key](https://www.weatherapi.com/signup.aspx)
+- **Alerts:** Government weather alerts from USA, UK, Europe and worldwide
+- **Status:** ✅ **Fully tested and working**
+
+### OpenWeatherMap (Legacy)
+- **Coverage:** Worldwide
+- **Cost:** PAID subscription required for One Call API 3.0
+- **API Key:** [Get API key](https://home.openweathermap.org/)
+- **Note:** Requires [One Call API 3.0 subscription](https://openweathermap.org/api/one-call-3) with alerts enabled (paid)
+- **Status:** ⚠️ **Untested** - Requires paid subscription tier that includes weather alerts.
 
 ## Example
 
@@ -17,9 +31,9 @@ Displays active weather alerts as provided by the [OpenWeatherMap One Call API 3
 ### Requirements
 
 - MagicMirror² instance
-- OpenWeatherMap API key with **One Call API 3.0 subscription** (paid)
-  - Get your API key at [OpenWeatherMap](https://home.openweathermap.org/)
-  - Subscribe to the [One Call API 3.0](https://openweathermap.org/api/one-call-3)
+- Weather API key:
+  - **WeatherAPI.com** (recommended): [Free signup](https://www.weatherapi.com/signup.aspx) - 1M calls/month free
+  - **OpenWeatherMap**: [Get API key](https://home.openweathermap.org/) - Requires paid One Call API 3.0 subscription
 
 ### Install Module
 
@@ -39,16 +53,34 @@ cd ~/MagicMirror/modules/MMM-WeatherAlerts
 
 To use this module, add it to the modules array in the config/config.js file:
 
+### WeatherAPI.com (Recommended)
+
 ```js
   {
     module: "MMM-WeatherAlerts",
     position: "top_right",
     header: "Weather Alerts",
     config: {
-      // See 'Configuration options' for more information.
-      lat: "yourLatitude",
-      lon: "yourLongitude",
-      apiKey: "yourOpenWeatherMapApiKey"
+      provider: "weatherapi",  // Use WeatherAPI.com
+      lat: 52.52,              // Your latitude
+      lon: 13.41,              // Your longitude
+      apiKey: "YOUR_API_KEY"  // Get free key from weatherapi.com
+    },
+  },
+```
+
+### OpenWeatherMap (Alternative)
+
+```js
+  {
+    module: "MMM-WeatherAlerts",
+    position: "top_right",
+    header: "Weather Alerts",
+    config: {
+      provider: "openweathermap",  // Use OpenWeatherMap
+      lat: 52.52,                   // Your latitude
+      lon: 13.41,                   // Your longitude
+      apiKey: "YOUR_API_KEY"       // Requires paid subscription
     },
   },
 ```
@@ -68,8 +100,17 @@ The following properties can be configured:
 	<thead>
 	<tbody>
 		<tr>
+			<td><code>provider</code></td>
+			<td>Which weather API provider to use.<br>
+				<br><b>Possible values:</b> <code>'weatherapi'</code> or <code>'openweathermap'</code>
+				<br><b>Default value:</b> <code>'weatherapi'</code>
+				<br>
+				<br><b>Note:</b> WeatherAPI.com is recommended (free, worldwide, 1M calls/month). OpenWeatherMap requires paid subscription.
+			</td>
+		</tr>
+		<tr>
 			<td><code>weatherEndpoint</code></td>
-			<td>The OpenWeatherMap API endPoint.<br>
+			<td>The OpenWeatherMap API endPoint (only used when provider is 'openweathermap').<br>
 				<br><b>Possible values:</b> <code>'/onecall'</code>
 				<br><b>Default value:</b> <code>'/onecall'</code>
 				<br>
@@ -103,10 +144,11 @@ The following properties can be configured:
 		</tr>
 		<tr>
 			<td><code>apiKey</code></td>
-			<td>The <a href="https://home.openweathermap.org/">OpenWeatherMap</a> API key with One Call API 3.0 subscription, which can be obtained by creating an OpenWeatherMap account and subscribing to the One Call API.<br>
+			<td>Your weather API key.<br>
+				<br><b>WeatherAPI.com:</b> Free signup at <a href="https://www.weatherapi.com/signup.aspx">weatherapi.com</a> (1M calls/month free)
+				<br><b>OpenWeatherMap:</b> Requires paid <a href="https://openweathermap.org/api/one-call-3">One Call API 3.0 subscription</a>
 				<br>
 				<br>This value is <b>REQUIRED</b>
-				<br><b>Note:</b> The One Call API 3.0 requires a paid subscription.
 			</td>
 		</tr>
 		<tr>
@@ -244,6 +286,25 @@ The following properties can be configured:
 
 ## Other Notes and Considerations
 
-This module is set to only display when a weather alert is active/available from the OpenWeatherMap onecall API. If no alerts are active, then the module will not be visible. If your location does not currently have an active weather alert, then you can test the module by changing your lat/lon to a location with an active alert. The U.S. pretty much always has some [active alerts](https://alerts.weather.gov/cap/us.php?x=1)
+This module is set to only display when a weather alert is active/available from the weather API. If no alerts are active, then the module will not be visible.
+
+If your location does not currently have an active weather alert, then you can test the module by changing your lat/lon to a location with an active alert:
+- **USA:** The U.S. pretty much always has some [active alerts](https://alerts.weather.gov/cap/us.php?x=1)
+- **Europe/UK:** Check your local weather service for active warnings
+- **Worldwide:** WeatherAPI.com provides government-issued alerts globally
+
+### Testing Without Active Alerts
+
+If you want to verify the module is working but your location has no alerts:
+1. Change `lat`/`lon` to a location with active alerts (e.g., Florida in hurricane season)
+2. Check the browser console for "Found X alert(s)" messages
+3. Verify API calls are successful (no errors in logs)
+
+### Provider Comparison
+
+- **Use WeatherAPI.com** if you want: Free worldwide coverage, easy setup, no payment required
+- **Use OpenWeatherMap** if you already have: A paid One Call API 3.0 subscription with alerts enabled
+
+**Note:** OpenWeatherMap support is legacy/untested in current version due to paid subscription requirement. We recommend using WeatherAPI.com.
 
 

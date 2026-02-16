@@ -30,6 +30,7 @@ class WeatherAlertObject {
 
 Module.register("MMM-WeatherAlerts", {
   defaults: {
+    provider: "weatherapi", // weatherapi or openweathermap
     roundTemp: false,
     type: "alerts", // alerts (only with OpenWeatherMap /onecall endpoint)
     units: config.units,
@@ -83,7 +84,7 @@ Module.register("MMM-WeatherAlerts", {
 
   // Return the scripts that are necessary for the weather module.
   getScripts: function () {
-    return ["moment.js", "openweathermap.js"];
+    return ["moment.js", "weatherapi.js", "openweathermap.js"];
   },
 
   // Override getHeader method.
@@ -117,9 +118,17 @@ Module.register("MMM-WeatherAlerts", {
       this.windUnits = "beaufort";
     }
 
-    // Initialize the weather provider.
-    this.weatherAlertProvider = new OpenWeatherMapProvider(this.config, this);
-    Log.info("Weather alert provider initialized: OpenWeatherMap");
+    // Initialize the weather provider based on config
+    if (this.config.provider === "weatherapi") {
+      this.weatherAlertProvider = new WeatherAPIProvider(this.config, this);
+      Log.info("Weather alert provider initialized: WeatherAPI.com");
+    } else if (this.config.provider === "openweathermap") {
+      this.weatherAlertProvider = new OpenWeatherMapProvider(this.config, this);
+      Log.info("Weather alert provider initialized: OpenWeatherMap");
+    } else {
+      Log.error("Unknown weather provider: " + this.config.provider + ". Using WeatherAPI.com as fallback.");
+      this.weatherAlertProvider = new WeatherAPIProvider(this.config, this);
+    }
 
     // Add custom filters
     this.addFilters();
