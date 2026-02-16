@@ -130,9 +130,6 @@ Module.register("MMM-WeatherAlerts", {
       this.weatherAlertProvider = new WeatherAPIProvider(this.config, this);
     }
 
-    // Add custom filters
-    this.addFilters();
-
     // Schedule the first update.
     this.scheduleUpdate(this.config.initialLoadDelay);
   },
@@ -199,23 +196,79 @@ Module.register("MMM-WeatherAlerts", {
     this.fetchDataResolvers.push({ resolve, reject });
   },
 
-  // Select the template depending on the display type.
-  getTemplate: function () {
-    switch (this.config.type.toLowerCase()) {
-      case "alerts":
-        return "alerts.njk";
-      //Set up this way to allow easy integration with default weather module in the future...
-      default:
-        return "alerts.njk";
-    }
-  },
+  // Build the DOM for weather alerts
+  getDom: function () {
+    const wrapper = document.createElement("div");
+    const alerts = this.weatherAlertProvider?.currentWeatherAlerts();
 
-  // Add all the data to the template.
-  getTemplateData: function () {
-    return {
-      config: this.config,
-      alerts: this.weatherAlertProvider.currentWeatherAlerts(),
-    };
+    if (!alerts || alerts.length === 0) {
+      wrapper.innerHTML = this.translate("LOADING");
+      wrapper.className = "dimmed light small";
+      return wrapper;
+    }
+
+    // Determine number of alerts to show
+    const numAlerts = this.config.maxNumberOfAlerts
+      ? Math.min(alerts.length, this.config.maxNumberOfAlerts)
+      : alerts.length;
+
+    const alertsToShow = alerts.slice(0, numAlerts);
+
+    // Create table
+    const table = document.createElement("table");
+    table.className = `${this.config.tableClass} alert-table`;
+
+    alertsToShow.forEach((alert) => {
+      // Alert event row
+      const eventRow = document.createElement("tr");
+      eventRow.className = this.config.colored ? "colored" : "bright";
+
+      const eventCell = document.createElement("td");
+      eventCell.className = `align-left ${this.getAlertColorCode(alert.event)}`;
+      eventCell.innerHTML = `<span>${alert.event}</span>`;
+      eventRow.appendChild(eventCell);
+
+      // End time cell
+      if (this.config.showEndTime) {
+        const timeCell = document.createElement("td");
+        timeCell.className = "bright light align-right";
+
+        if (this.config.alertTimeFormat === "relative") {
+          timeCell.textContent = this.translate("ends") + " " + alert.end.fromNow();
+        } else {
+          timeCell.textContent = this.translate("until") + " " +
+            alert.end.format(this.config.alertDateFormat) + " " +
+            this.translate("at") + " " + this.formatTime(alert.end);
+        }
+
+        eventRow.appendChild(timeCell);
+      }
+
+      table.appendChild(eventRow);
+
+      // Description row
+      if (this.config.showAlertDescription) {
+        const descRow = document.createElement("tr");
+        const descCell = document.createElement("td");
+        descCell.colSpan = 2;
+
+        if (this.config.staticAlertDescription) {
+          descCell.className = "static-description";
+          descCell.innerHTML = `<span>${alert.description}</span>`;
+        } else {
+          const marquee = document.createElement("marquee");
+          marquee.setAttribute("scrolldelay", this.config.alertDescriptionScrollDelay);
+          marquee.innerHTML = `<span>${alert.description}</span>`;
+          descCell.appendChild(marquee);
+        }
+
+        descRow.appendChild(descCell);
+        table.appendChild(descRow);
+      }
+    });
+
+    wrapper.appendChild(table);
+    return wrapper;
   },
 
   // What to do when the weather alert provider has new information available?
@@ -276,93 +329,29 @@ Module.register("MMM-WeatherAlerts", {
     return roundValue === "-0" ? 0 : roundValue;
   },
 
-  addFilters() {
-    this.nunjucksEnvironment().addFilter(
-      "formatTime",
-      function (date) {
-        if (config.timeFormat !== 24) {
-          if (this.config.showPeriod) {
-            if (this.config.showPeriodUpper) {
-              return date.format("h:mm A");
-            } else {
-              return date.format("h:mm a");
-            }
-          } else {
-            return date.format("h:mm");
-          }
-        }
-
-        return date.format("HH:mm");
-      }.bind(this)
-    );
-
-    this.nunjucksEnvironment().addFilter(
-      "alertColorCode",
-      function (value) {
-        if (!value[0].match(/[a-z]/i)) {
-          // add a leading '_' if the event does not start with a letter
-          return "_" + value.toLowerCase().replaceAll(" ", "-");
+  // Format time based on config
+  formatTime: function (date) {
+    if (this.config.timeFormat !== 24) {
+      if (this.config.showPeriod) {
+        if (this.config.showPeriodUpper) {
+          return date.format("h:mm A");
         } else {
-          return value.toLowerCase().replaceAll(" ", "-");
+          return date.format("h:mm a");
         }
-      }.bind(this)
-    );
+      } else {
+        return date.format("h:mm");
+      }
+    }
+    return date.format("HH:mm");
+  },
 
-    this.nunjucksEnvironment().addFilter(
-      "roundValue",
-      function (value) {
-        return this.roundValue(value);
-      }.bind(this)
-    );
-
-    this.nunjucksEnvironment().addFilter(
-      "decimalSymbol",
-      function (value) {
-        return value.toString().replace(/\./g, this.config.decimalSymbol);
-      }.bind(this)
-    );
-
-    // this.nunjucksEnvironment().addFilter(
-    // 	"calcNumSteps",
-    // 	function (alerts) {
-    // 		return Math.min(alerts.length, this.config.maxNumberOfDays);
-    // 	}.bind(this)
-    // );
-
-    this.nunjucksEnvironment().addFilter(
-      "calcNumAlerts",
-      function (alerts) {
-        return this.config.maxNumberOfAlerts
-          ? Math.min(alerts.length, this.config.maxNumberOfAlerts)
-          : alerts.length;
-      }.bind(this)
-    );
-
-    this.nunjucksEnvironment().addFilter(
-      "calcNumEntries",
-      function (dataArray) {
-        return Math.min(dataArray.length, this.config.maxEntries);
-      }.bind(this)
-    );
-
-    this.nunjucksEnvironment().addFilter(
-      "opacity",
-      function (currentStep, numSteps) {
-        if (this.config.fade && this.config.fadePoint < 1) {
-          if (this.config.fadePoint < 0) {
-            this.config.fadePoint = 0;
-          }
-          const startingPoint = numSteps * this.config.fadePoint;
-          const numFadesteps = numSteps - startingPoint;
-          if (currentStep >= startingPoint) {
-            return 1 - (currentStep - startingPoint) / numFadesteps;
-          } else {
-            return 1;
-          }
-        } else {
-          return 1;
-        }
-      }.bind(this)
-    );
+  // Generate CSS class name from alert event
+  getAlertColorCode: function (value) {
+    if (!value[0].match(/[a-z]/i)) {
+      // add a leading '_' if the event does not start with a letter
+      return "_" + value.toLowerCase().replaceAll(" ", "-");
+    } else {
+      return value.toLowerCase().replaceAll(" ", "-");
+    }
   },
 });
