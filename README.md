@@ -26,16 +26,14 @@ Displays active weather alerts as provided by weather APIs. Module will not be v
 
 ![Example image 2](/images/MMM-WeatherAlerts-example2.gif)
 
-## Installation
-
-### Requirements
+## Requirements
 
 - MagicMirror² instance
 - Weather API key:
   - **WeatherAPI.com** (recommended): [Free signup](https://www.weatherapi.com/signup.aspx) - 1M calls/month free
   - **OpenWeatherMap**: [Get API key](https://home.openweathermap.org/) - Requires paid One Call API 3.0 subscription
 
-### Install Module
+## Installation
 
 To install this module via CLI, navigate into `~/MagicMirror/modules` and type the following commands:
 
@@ -64,7 +62,7 @@ To use this module, add it to the modules array in the config/config.js file:
       provider: "weatherapi",  // Use WeatherAPI.com
       lat: 52.52,              // Your latitude
       lon: 13.41,              // Your longitude
-      apiKey: "YOUR_API_KEY"  // Get free key from weatherapi.com
+      apiKey: "YOUR_API_KEY"   // Get free key from weatherapi.com
     },
   },
 ```
@@ -77,10 +75,10 @@ To use this module, add it to the modules array in the config/config.js file:
     position: "top_right",
     header: "Weather Alerts",
     config: {
-      provider: "openweathermap",  // Use OpenWeatherMap
+      provider: "openweathermap",   // Use OpenWeatherMap
       lat: 52.52,                   // Your latitude
       lon: 13.41,                   // Your longitude
-      apiKey: "YOUR_API_KEY"       // Requires paid subscription
+      apiKey: "YOUR_API_KEY"        // Requires paid subscription
     },
   },
 ```
