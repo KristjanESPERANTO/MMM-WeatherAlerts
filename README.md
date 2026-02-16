@@ -1,18 +1,18 @@
 # MMM-WeatherAlerts
-This is a module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror). 
+
+This is a module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror).
 
 Displays active weather alerts as provided by the [openweathermap onecall API](https://openweathermap.org/api/one-call-3). Module will not be visible when no alerts are active.
 
 OpenWeatherMap currently advertises version 3.0 of their onecall API which requires a subscription, but this module is compatible with older, non-subscription versions of the onecall API (e.g. version 2.5).
 
-
-# Example
+## Example
 
 ![Example image 1](/images/MMM-WeatherAlerts-default_example.png)
 
 ![Example image 2](/images/MMM-WeatherAlerts-example2.gif)
 
-# Installation
+## Installation
 
 To install this module via CLI, navigate into `~/MagicMirror/modules` and type the following commands:
 
@@ -20,24 +20,17 @@ To install this module via CLI, navigate into `~/MagicMirror/modules` and type t
 git clone https://github.com/gjonesme/MMM-WeatherAlerts
 ```
 
-```bash
-cd MMM-WeatherAlerts && npm install
-```
-
-# Update
+## Update
 
 ```bash
 cd ~/MagicMirror/modules/MMM-WeatherAlerts
-git pull
-npm install
 ```
 
-# Usage
+## Configuration
 
 To use this module, add it to the modules array in the config/config.js file:
 
 ```js
-modules: [
   {
     module: "MMM-WeatherAlerts",
     position: "top_right",
@@ -49,13 +42,11 @@ modules: [
       apiKey: "yourOpenWeatherMapApiKey"
     },
   },
-];
 ```
 
+### Configuration Options
 
-# Configuration Options
 
-	
 The following properties can be configured:
 
 <table width="75%">
@@ -237,16 +228,16 @@ The following properties can be configured:
 				<br><b>Possible values:</b> <code>true</code> or <code>false</code>
 				<br><b>Default value:</b> <code>false</code>
 			</td>
-	    	</tr> 
+	    	</tr>
 		<tr>
 			<td><code>alertDescriptionScrollDelay</code></td>
       			<td>Sets text scroll delay (in milliseconds) of alert decription ticker/marquee when <code>staticAlertDescription</code> is set to <code>false</code>.<br>
 				<br><b>Possible values:</b> Minimum of <code>60</code>
 				<br><b>Default value:</b> <code>85</code>
-        			<br><b>Note:</b> The lower the value, the faster the alert description text will move. 
+        			<br><b>Note:</b> The lower the value, the faster the alert description text will move.
 			</td>
 		</tr>
-    
+
   </tbody>
 </table>
 
