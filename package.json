@@ -7,6 +7,11 @@
     "type": "git",
     "url": "git+https://github.com/gjonesme/MMM-WeatherAlerts.git"
   },
+  "scripts": {
+    "lint": "eslint && prettier . --check",
+    "lint:fix": "eslint --fix && prettier . --write",
+    "test": "node --run lint"
+  },
   "keywords": [
     "MagicMirror",
     "MagicMirror²",
@@ -18,5 +23,12 @@
   ],
   "author": "Gary Jones",
   "license": "MIT",
-  "devDependencies": {}
+  "devDependencies": {
+    "@eslint/css": "^0.14.1",
+    "@eslint/js": "^10.0.1",
+    "@eslint/markdown": "^7.5.1",
+    "@stylistic/eslint-plugin": "^5.8.0",
+    "eslint": "^10.0.0",
+    "prettier": "^3.8.1"
+  }
 }
