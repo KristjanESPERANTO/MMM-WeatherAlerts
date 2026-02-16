@@ -5,30 +5,36 @@ const WeatherAlertProvider = Class.extend({
   providerName: null,
   defaults: {},
 
-  // The following properties have accessor methods.
-  // Try to not access them directly.
+  /*
+   * The following properties have accessor methods.
+   * Try to not access them directly.
+   */
   currentWeatherObject: null,
   weatherForecastArray: null,
   weatherHourlyArray: null,
   fetchedLocationName: null,
 
-  // The following properties will be set automatically.
-  // You do not need to overwrite these properties.
+  /*
+   * The following properties will be set automatically.
+   * You do not need to overwrite these properties.
+   */
   config: null,
   delegate: null,
   providerIdentifier: null,
 
-  // Weather Provider Methods
-  // All the following methods can be overwritten, although most are good as they are.
+  /*
+   * Weather Provider Methods
+   * All the following methods can be overwritten, although most are good as they are.
+   */
 
   // Called when a weather provider is initialized.
-  init: function (config) {
+  init (config) {
     this.config = config;
     Log.info(`Weather alert provider: ${this.providerName} initialized.`);
   },
 
   // Called to set the config, this config is the same as the weather module's config.
-  setConfig: function (config) {
+  setConfig (config) {
     this.config = config;
     Log.info(
       `Weather alert provider: ${this.providerName} config set.`,
@@ -37,41 +43,41 @@ const WeatherAlertProvider = Class.extend({
   },
 
   // Called when the weather provider is about to start.
-  start: function () {
+  start () {
     Log.info(`Weather alert provider: ${this.providerName} started.`);
   },
 
-  // This method should start the API request to fetch the current weather.
-  // This method should definitely be overwritten in the provider.
-  fetchCurrentWeatherAlerts: function () {
-    Log.warn(
-      `Weather alert provider: ${this.providerName} does not subclass the fetchCurrentWeatherAlerts method.`
-    );
+  /*
+   * This method should start the API request to fetch the current weather.
+   * This method should definitely be overwritten in the provider.
+   */
+  fetchCurrentWeatherAlerts () {
+    Log.warn(`Weather alert provider: ${this.providerName} does not subclass the fetchCurrentWeatherAlerts method.`);
   },
 
   // This returns a WeatherAlerts object for the current weather alerts.
-  currentWeatherAlerts: function () {
+  currentWeatherAlerts () {
     return this.currentWeatherAlertsObject;
   },
 
   // This returns the name of the fetched location or an empty string.
-  fetchedLocation: function () {
+  fetchedLocation () {
     return this.fetchedLocationName || "";
   },
 
   // Set the currentWeatherAlerts and notify the delegate that new information is available.
-  setCurrentWeatherAlerts: function (currentWeatherAlertsObject) {
+  setCurrentWeatherAlerts (currentWeatherAlertsObject) {
     // We should check here if we are passing a WeatherAlert
     this.currentWeatherAlertsObject = currentWeatherAlertsObject;
   },
 
   // Set the fetched location name.
-  setFetchedLocation: function (name) {
+  setFetchedLocation (name) {
     this.fetchedLocationName = name;
   },
 
   // Notify the delegate that new weather is available.
-  updateAvailable: function () {
+  updateAvailable () {
     this.delegate.updateAvailable(this);
   },
 
@@ -84,13 +90,13 @@ const WeatherAlertProvider = Class.extend({
    * @param {Array.<string>} expectedResponseHeaders the expected HTTP headers to recieve
    * @returns {Promise} resolved when the fetch is done
    */
-  fetchData: function (
+  fetchData (
     url,
     type = "json",
     requestHeaders = undefined,
     expectedResponseHeaders = undefined
   ) {
-    const mockData = this.config.mockData;
+    const {mockData} = this.config;
     if (mockData) {
       const data = mockData.substring(1, mockData.length - 1);
       return Promise.resolve(JSON.parse(data));
@@ -103,13 +109,13 @@ const WeatherAlertProvider = Class.extend({
 
       // Send request to node_helper
       this.delegate.sendSocketNotification("FETCH_WEATHER_ALERTS", {
-        url: url,
-        type: type,
-        requestHeaders: requestHeaders,
+        url,
+        type,
+        requestHeaders,
         identifier: this.delegate.identifier
       });
     });
-  },
+  }
 });
 
 /**
@@ -123,7 +129,10 @@ WeatherAlertProvider.providers = [];
  * @param {string} providerIdentifier The name of the weather provider
  * @param {object} providerDetails The details of the weather provider
  */
-WeatherAlertProvider.register = function (providerIdentifier, providerDetails) {
+WeatherAlertProvider.register = function register (
+  providerIdentifier,
+  providerDetails
+) {
   WeatherAlertProvider.providers[providerIdentifier.toLowerCase()] =
     WeatherAlertProvider.extend(providerDetails);
 };
@@ -135,11 +144,14 @@ WeatherAlertProvider.register = function (providerIdentifier, providerDetails) {
  * @param {object} delegate The weather module
  * @returns {object} The new weather provider
  */
-WeatherAlertProvider.initialize = function (providerIdentifier, delegate) {
-  providerIdentifier = providerIdentifier.toLowerCase();
+WeatherAlertProvider.initialize = function initialize (
+  providerIdentifier,
+  delegate
+) {
+  const normalizedIdentifier = providerIdentifier.toLowerCase();
 
-  const provider = new WeatherAlertProvider.providers[providerIdentifier]();
-  const config = Object.assign({}, provider.defaults, delegate.config);
+  const provider = new WeatherAlertProvider.providers[normalizedIdentifier]();
+  const config = {...provider.defaults, ...delegate.config};
 
   provider.delegate = delegate;
   provider.setConfig(config);

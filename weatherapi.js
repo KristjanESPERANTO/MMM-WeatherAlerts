@@ -1,207 +1,210 @@
-/* global moment, Log */
-
+/* eslint-disable-next-line no-unused-vars */
 class WeatherAPIProvider {
-	constructor(config, delegate) {
-		this.config = Object.assign({}, this.getDefaults(), config);
-		this.delegate = delegate;
-		this.currentWeatherAlertsObject = [];
-		this.fetchedLocationName = "";
-	}
+  constructor (config, delegate) {
+    this.config = {...this.getDefaults(), ...config};
+    this.delegate = delegate;
+    this.currentWeatherAlertsObject = [];
+    this.fetchedLocationName = "";
+  }
 
-	getDefaults() {
-		return {
-			apiBase: "https://api.weatherapi.com/v1/",
-			weatherEndpoint: "forecast.json",
-			lat: 0,
-			lon: 0,
-			apiKey: "",
-			lang: "en",
-			type: "alerts"
-		};
-	}
+  getDefaults () {
+    return {
+      apiBase: "https://api.weatherapi.com/v1/",
+      weatherEndpoint: "forecast.json",
+      lat: 0,
+      lon: 0,
+      apiKey: "",
+      lang: "en",
+      type: "alerts"
+    };
+  }
 
-	/**
-	 * Fetch current weather alerts from WeatherAPI.com
-	 */
-	fetchCurrentWeatherAlerts() {
-		this.fetchData(this.getUrl())
-			.then((data) => {
-				const currentWeatherAlerts = this.generateWeatherAlertObjectsFromForecast(data).alerts;
-				this.setFetchedLocation(`${data.location.name}, ${data.location.region}, ${data.location.country}`);
-				this.setCurrentWeatherAlerts(currentWeatherAlerts);
-			})
-			.catch((error) => {
-				Log.error("Could not load data ... ", error);
-			})
-			.finally(() => this.updateAvailable());
-	}
+  /**
+   * Fetch current weather alerts from WeatherAPI.com
+   */
+  fetchCurrentWeatherAlerts () {
+    this.fetchData(this.getUrl())
+      .then((data) => {
+        const currentWeatherAlerts =
+          this.generateWeatherAlertObjectsFromForecast(data).alerts;
+        this.setFetchedLocation(`${data.location.name}, ${data.location.region}, ${data.location.country}`);
+        this.setCurrentWeatherAlerts(currentWeatherAlerts);
+      })
+      .catch((error) => {
+        Log.error("Could not load data ... ", error);
+      })
+      .finally(() => this.updateAvailable());
+  }
 
-	/**
-	 * Fetch data via node_helper
-	 */
-	fetchData(url, type = "json", requestHeaders = undefined) {
-		const mockData = this.config.mockData;
-		if (mockData) {
-			const data = mockData.substring(1, mockData.length - 1);
-			return Promise.resolve(JSON.parse(data));
-		}
+  /**
+   * Fetch data via node_helper
+   */
+  fetchData (url, requestHeaders, type = "json") {
+    const {mockData} = this.config;
+    if (mockData) {
+      const data = mockData.substring(1, mockData.length - 1);
+      return Promise.resolve(JSON.parse(data));
+    }
 
-		return new Promise((resolve, reject) => {
-			this.delegate.addFetchDataResolver(resolve, reject);
-			this.delegate.sendSocketNotification("FETCH_WEATHER_ALERTS", {
-				url: url,
-				type: type,
-				requestHeaders: requestHeaders,
-				identifier: this.delegate.identifier
-			});
-		});
-	}
+    return new Promise((resolve, reject) => {
+      this.delegate.addFetchDataResolver(resolve, reject);
+      this.delegate.sendSocketNotification("FETCH_WEATHER_ALERTS", {
+        url,
+        requestHeaders,
+        type,
+        identifier: this.delegate.identifier
+      });
+    });
+  }
 
-	/**
-	 * Build the complete API URL
-	 */
-	getUrl() {
-		return this.config.apiBase + this.config.weatherEndpoint + this.getParams();
-	}
+  /**
+   * Build the complete API URL
+   */
+  getUrl () {
+    return this.config.apiBase + this.config.weatherEndpoint + this.getParams();
+  }
 
-	/**
-	 * Generate URL parameters for the API request
-	 */
-	getParams() {
-		let params = "?";
-		params += "key=" + this.config.apiKey;
+  /**
+   * Generate URL parameters for the API request
+   */
+  getParams () {
+    let params = "?";
+    params += `key=${this.config.apiKey}`;
 
-		// WeatherAPI.com uses lat,lon as q parameter
-		params += "&q=" + this.config.lat + "," + this.config.lon;
+    // WeatherAPI.com uses lat,lon as q parameter
+    params += `&q=${this.config.lat},${this.config.lon}`;
 
-		// Request alerts and disable AQI
-		params += "&alerts=yes";
-		params += "&aqi=no";
+    // Request alerts and disable AQI
+    params += "&alerts=yes";
+    params += "&aqi=no";
 
-		// 1 day forecast (minimum required for alerts)
-		params += "&days=1";
+    // 1 day forecast (minimum required for alerts)
+    params += "&days=1";
 
-		// Language support
-		if (this.config.lang && this.config.lang !== "en") {
-			params += "&lang=" + this.config.lang;
-		}
+    // Language support
+    if (this.config.lang && this.config.lang !== "en") {
+      params += `&lang=${this.config.lang}`;
+    }
 
-		return params;
-	}
+    return params;
+  }
 
-	/**
-	 * Generate WeatherAlertObjects from WeatherAPI.com forecast data
-	 */
-	generateWeatherAlertObjectsFromForecast(data) {
-		const alerts = [];
+  /**
+   * Generate WeatherAlertObjects from WeatherAPI.com forecast data
+   */
+  generateWeatherAlertObjectsFromForecast (data) {
+    const alerts = [];
 
-		if (data.alerts && data.alerts.alert && Array.isArray(data.alerts.alert)) {
-			for (const alert of data.alerts.alert) {
-				const weatherAlert = new WeatherAlertObject();
+    if (data.alerts && data.alerts.alert && Array.isArray(data.alerts.alert)) {
+      for (const alert of data.alerts.alert) {
+        const weatherAlert = new WeatherAlertObject();
 
-				// Map WeatherAPI.com alert fields to our WeatherAlertObject
-				weatherAlert.event = alert.event || alert.headline || "Weather Alert";
-				weatherAlert.description = alert.desc || alert.instruction || "";
-				weatherAlert.senderName = this.extractSenderFromNote(alert.note);
-				weatherAlert.start = moment(alert.effective);
-				weatherAlert.end = moment(alert.expires);
+        // Map WeatherAPI.com alert fields to our WeatherAlertObject
+        weatherAlert.event = alert.event || alert.headline || "Weather Alert";
+        weatherAlert.description = alert.desc || alert.instruction || "";
+        weatherAlert.senderName = this.extractSenderFromNote(alert.note);
+        weatherAlert.start = moment(alert.effective);
+        weatherAlert.end = moment(alert.expires);
 
-				// Additional WeatherAPI.com specific fields
-				weatherAlert.headline = alert.headline;
-				weatherAlert.severity = alert.severity;
-				weatherAlert.urgency = alert.urgency;
-				weatherAlert.areas = alert.areas;
-				weatherAlert.certainty = alert.certainty;
-				weatherAlert.category = alert.category;
-				weatherAlert.instruction = alert.instruction;
+        // Additional WeatherAPI.com specific fields
+        weatherAlert.headline = alert.headline;
+        weatherAlert.severity = alert.severity;
+        weatherAlert.urgency = alert.urgency;
+        weatherAlert.areas = alert.areas;
+        weatherAlert.certainty = alert.certainty;
+        weatherAlert.category = alert.category;
+        weatherAlert.instruction = alert.instruction;
 
-				// Parse description for structured components
-				weatherAlert.parsedDescription = this.parseWeatherAlertDescription(alert);
+        // Parse description for structured components
+        weatherAlert.parsedDescription =
+          this.parseWeatherAlertDescription(alert);
 
-				alerts.push(weatherAlert);
-			}
-		}
+        alerts.push(weatherAlert);
+      }
+    }
 
-		return { alerts: alerts };
-	}
+    return {alerts};
+  }
 
-	/**
-	 * Extract sender name from note field
-	 * Example: "Alert for Calhoun; Richland (South Carolina) Issued by the National Weather Service"
-	 */
-	extractSenderFromNote(note) {
-		if (!note) return "Weather Agency";
+  /**
+   * Extract sender name from note field
+   * Example: "Alert for Calhoun; Richland (South Carolina) Issued by the National Weather Service"
+   */
+  extractSenderFromNote (note) {
+    if (!note) {
+      return "Weather Agency";
+    }
 
-		const issuedByMatch = note.match(/Issued by (.*)/i);
-		if (issuedByMatch && issuedByMatch[1]) {
-			return issuedByMatch[1].trim();
-		}
+    const issuedByMatch = note.match(/Issued by (?<sender>.*)/iu);
+    if (issuedByMatch?.groups?.sender) {
+      return issuedByMatch.groups.sender.trim();
+    }
 
-		return note;
-	}
+    return note;
+  }
 
-	/**
-	 * Parse weather alert into structured components
-	 * WeatherAPI.com provides structured data, so we organize it differently than OpenWeatherMap
-	 */
-	parseWeatherAlertDescription(alert) {
-		const parsedDescription = {
-			header: alert.headline || "",
-			what: alert.event || "",
-			where: alert.areas || "",
-			when: `${moment(alert.effective).format("LLL")} - ${moment(alert.expires).format("LLL")}`,
-			impacts: "",
-			additionalDetails: alert.desc || "",
-			precautionaryActions: alert.instruction || "",
-			severity: alert.severity || "",
-			urgency: alert.urgency || "",
-			certainty: alert.certainty || "",
-			other: ""
-		};
+  /**
+   * Parse weather alert into structured components
+   * WeatherAPI.com provides structured data, so we organize it differently than OpenWeatherMap
+   */
+  parseWeatherAlertDescription (alert) {
+    const parsedDescription = {
+      header: alert.headline || "",
+      what: alert.event || "",
+      where: alert.areas || "",
+      when: `${moment(alert.effective).format("LLL")} - ${moment(alert.expires).format("LLL")}`,
+      impacts: "",
+      additionalDetails: alert.desc || "",
+      precautionaryActions: alert.instruction || "",
+      severity: alert.severity || "",
+      urgency: alert.urgency || "",
+      certainty: alert.certainty || "",
+      other: ""
+    };
 
-		// Extract IMPACTS section from description if present
-		if (alert.desc) {
-			const impactsMatch = alert.desc.match(/\*\s*IMPACTS[:\s]+(.*?)(?=\*|$)/is);
-			if (impactsMatch && impactsMatch[1]) {
-				parsedDescription.impacts = impactsMatch[1].trim();
-			}
-		}
+    // Extract IMPACTS section from description if present
+    if (alert.desc) {
+      const impactsMatch = alert.desc.match(/\*\s*IMPACTS[:\s]+(?<impacts>.*?)(?=\*|$)/isu);
+      if (impactsMatch?.groups?.impacts) {
+        parsedDescription.impacts = impactsMatch.groups.impacts.trim();
+      }
+    }
 
-		return parsedDescription;
-	}
+    return parsedDescription;
+  }
 
-	/**
-	 * Get current weather alerts
-	 */
-	currentWeatherAlerts() {
-		return this.currentWeatherAlertsObject;
-	}
+  /**
+   * Get current weather alerts
+   */
+  currentWeatherAlerts () {
+    return this.currentWeatherAlertsObject;
+  }
 
-	/**
-	 * Get fetched location name
-	 */
-	fetchedLocation() {
-		return this.fetchedLocationName || "";
-	}
+  /**
+   * Get fetched location name
+   */
+  fetchedLocation () {
+    return this.fetchedLocationName || "";
+  }
 
-	/**
-	 * Set current weather alerts
-	 */
-	setCurrentWeatherAlerts(currentWeatherAlertsObject) {
-		this.currentWeatherAlertsObject = currentWeatherAlertsObject;
-	}
+  /**
+   * Set current weather alerts
+   */
+  setCurrentWeatherAlerts (currentWeatherAlertsObject) {
+    this.currentWeatherAlertsObject = currentWeatherAlertsObject;
+  }
 
-	/**
-	 * Set fetched location name
-	 */
-	setFetchedLocation(name) {
-		this.fetchedLocationName = name;
-	}
+  /**
+   * Set fetched location name
+   */
+  setFetchedLocation (name) {
+    this.fetchedLocationName = name;
+  }
 
-	/**
-	 * Notify delegate that new data is available
-	 */
-	updateAvailable() {
-		this.delegate.updateAvailable();
-	}
+  /**
+   * Notify delegate that new data is available
+   */
+  updateAvailable () {
+    this.delegate.updateAvailable();
+  }
 }
