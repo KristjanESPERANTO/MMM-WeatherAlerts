@@ -2,9 +2,9 @@
 
 This is a module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror).
 
-Displays active weather alerts as provided by the [openweathermap onecall API](https://openweathermap.org/api/one-call-3). Module will not be visible when no alerts are active.
+Displays active weather alerts as provided by the [OpenWeatherMap One Call API 3.0](https://openweathermap.org/api/one-call-3). Module will not be visible when no alerts are active.
 
-OpenWeatherMap currently advertises version 3.0 of their onecall API which requires a subscription, but this module is compatible with older, non-subscription versions of the onecall API (e.g. version 2.5).
+**Note:** This module requires OpenWeatherMap One Call API 3.0, which requires a paid subscription. The older free version 2.5 has been discontinued by OpenWeatherMap and is no longer supported.
 
 ## Example
 
@@ -13,6 +13,15 @@ OpenWeatherMap currently advertises version 3.0 of their onecall API which requi
 ![Example image 2](/images/MMM-WeatherAlerts-example2.gif)
 
 ## Installation
+
+### Requirements
+
+- MagicMirror² instance
+- OpenWeatherMap API key with **One Call API 3.0 subscription** (paid)
+  - Get your API key at [OpenWeatherMap](https://home.openweathermap.org/)
+  - Subscribe to the [One Call API 3.0](https://openweathermap.org/api/one-call-3)
+
+### Install Module
 
 To install this module via CLI, navigate into `~/MagicMirror/modules` and type the following commands:
 
@@ -59,15 +68,6 @@ The following properties can be configured:
 	<thead>
 	<tbody>
 		<tr>
-			<td><code>weatherAlertProvider</code></td>
-			<td>Which weather alert provider to be used.<br>
-				<br><b>Possible values:</b> <code>'openweathermapalerts'</code>
-				<br><b>Default value:</b> <code>'openweathermapalerts'</code>
-				<br>
-				<br><b>Note:</b> Setup to have the same flexibility as the core weather module, currently only OpenWeatherMap is implemented.
-			</td>
-		</tr>
-		<tr>
 			<td><code>weatherEndpoint</code></td>
 			<td>The OpenWeatherMap API endPoint.<br>
 				<br><b>Possible values:</b> <code>'/onecall'</code>
@@ -103,9 +103,10 @@ The following properties can be configured:
 		</tr>
 		<tr>
 			<td><code>apiKey</code></td>
-			<td>The <a href="https://home.openweathermap.org/">OpenWeatherMap</a> API key, which can be obtained by creating an OpenWeatherMap account.<br>
+			<td>The <a href="https://home.openweathermap.org/">OpenWeatherMap</a> API key with One Call API 3.0 subscription, which can be obtained by creating an OpenWeatherMap account and subscribing to the One Call API.<br>
 				<br>
 				<br>This value is <b>REQUIRED</b>
+				<br><b>Note:</b> The One Call API 3.0 requires a paid subscription.
 			</td>
 		</tr>
 		<tr>

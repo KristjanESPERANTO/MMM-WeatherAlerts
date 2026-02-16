@@ -1,47 +1,95 @@
-/* MagicMirror²
- * Node Helper: {{MODULE_NAME}}
- *
- * By {{AUTHOR_NAME}}
- * {{LICENSE}} Licensed.
- */
-
-var NodeHelper = require("node_helper");
+const NodeHelper = require("node_helper");
+const Log = require("logger");
+const HTTPFetcher = require("../../js/http_fetcher");
 
 module.exports = NodeHelper.create({
+	fetchers: {},
 
-	// Override socketNotificationReceived method.
+	start() {
+		Log.info(`Starting node helper for: ${this.name}`);
+	},
 
-	/* socketNotificationReceived(notification, payload)
-	 * This method is called when a socket notification arrives.
-	 *
-	 * argument notification string - The identifier of the noitication.
-	 * argument payload mixed - The payload of the notification.
+	/**
+	 * socketNotificationReceived
+	 * Handle socket notifications from the module frontend
 	 */
-	socketNotificationReceived: function(notification, payload) {
-		if (notification === "{{MODULE_NAME}}-NOTIFICATION_TEST") {
-			console.log("Working notification system. Notification:", notification, "payload: ", payload);
-			// Send notification
-			this.sendNotificationTest(this.anotherFunction()); //Is possible send objects :)
+	socketNotificationReceived(notification, payload) {
+		if (notification === "FETCH_WEATHER_ALERTS") {
+			this.fetchWeatherAlerts(payload);
+		} else if (notification === "STOP_FETCHER") {
+			this.stopFetcher(payload.identifier);
 		}
 	},
 
-	// Example function send notification test
-	sendNotificationTest: function(payload) {
-		this.sendSocketNotification("{{MODULE_NAME}}-NOTIFICATION_TEST", payload);
-	},
+	/**
+	 * Fetch weather alerts data from API using HTTPFetcher
+	 * @param {object} config - Configuration object containing url, identifier, etc.
+	 */
+	fetchWeatherAlerts(config) {
+		const { url, identifier, type, requestHeaders } = config;
 
-	// this you can create extra routes for your module
-	extraRoutes: function() {
-		var self = this;
-		this.expressApp.get("/{{MODULE_NAME}}/extra_route", function(req, res) {
-			// call another function
-			values = self.anotherFunction();
-			res.send(values);
+		// Stop existing fetcher for this identifier if any
+		if (this.fetchers[identifier]) {
+			this.fetchers[identifier].clearTimer();
+		}
+
+		const options = {
+			reloadInterval: 0, // We handle the interval in the frontend
+			logContext: "MMM-WeatherAlerts"
+		};
+
+		if (requestHeaders) {
+			options.headers = {};
+			requestHeaders.forEach((header) => {
+				options.headers[header.name] = header.value;
+			});
+		}
+
+		const fetcher = new HTTPFetcher(url, options);
+
+		fetcher.on("response", async (response) => {
+			try {
+				let data;
+				if (type === "xml") {
+					data = await response.text();
+				} else {
+					data = await response.json();
+				}
+
+				// Send data back to frontend
+				this.sendSocketNotification("WEATHER_ALERTS_DATA", {
+					identifier: identifier,
+					data: data,
+					type: type
+				});
+			} catch (error) {
+				Log.error(`Error parsing response: ${error.message}`);
+				this.sendSocketNotification("FETCH_ERROR", {
+					identifier: identifier,
+					error: error.message
+				});
+			}
 		});
+
+		fetcher.on("error", (errorInfo) => {
+			Log.error(`Error fetching weather alerts: ${errorInfo.message}`);
+			this.sendSocketNotification("FETCH_ERROR", {
+				identifier: identifier,
+				error: errorInfo.message,
+				translationKey: errorInfo.translationKey
+			});
+		});
+
+		this.fetchers[identifier] = fetcher;
+
+		// Start a single fetch (not periodic)
+		fetcher.startPeriodicFetch();
 	},
 
-	// Test another function
-	anotherFunction: function() {
-		return {date: new Date(Date.now())};
+	stopFetcher(identifier) {
+		if (this.fetchers[identifier]) {
+			this.fetchers[identifier].clearTimer();
+			delete this.fetchers[identifier];
+		}
 	}
 });

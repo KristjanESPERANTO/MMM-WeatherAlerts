@@ -1,15 +1,35 @@
-/* global Module */
+/* global Module, OpenWeatherMapProvider, moment */
 
-/* MagicMirror²
- * Module: MMM-WeatherAlerts
- *
- * By Gary Jones
- * MIT Licensed.
+/**
+ * WeatherAlertObject class - Data model for weather alerts
  */
+class WeatherAlertObject {
+	constructor() {
+		this.description = null;
+		this.end = null;
+		this.event = null;
+		this.senderName = null;
+		this.start = null;
+		this.tags = null;
+		this.colorcode = null;
+		this.parsedDescription = null;
+	}
+
+	/**
+	 * Clone to simple object to prevent mutating.
+	 */
+	simpleClone() {
+		const toFlat = ["date", "sunrise", "sunset", "start", "end"];
+		const clone = { ...this };
+		for (const prop of toFlat) {
+			clone[prop] = clone?.[prop]?.valueOf() ?? clone?.[prop];
+		}
+		return clone;
+	}
+}
 
 Module.register("MMM-WeatherAlerts", {
   defaults: {
-    weatherAlertProvider: "openweathermapalerts",
     roundTemp: false,
     type: "alerts", // alerts (only with OpenWeatherMap /onecall endpoint)
     units: config.units,
@@ -53,6 +73,9 @@ Module.register("MMM-WeatherAlerts", {
   // Can be used by the provider to display location of event if nothing else is specified
   firstEvent: null,
 
+  // Queue for pending fetch requests
+  fetchDataResolvers: [],
+
   // Define required scripts.
   getStyles: function () {
     return ["font-awesome.css", "MMM-WeatherAlerts.css"];
@@ -60,16 +83,7 @@ Module.register("MMM-WeatherAlerts", {
 
   // Return the scripts that are necessary for the weather module.
   getScripts: function () {
-    Log.info(this.config.weatherAlertProvider);
-    return [
-      "moment.js",
-      // this.file("../default/utils.js"),
-      "weatheralertobject.js",
-      "weatheralertprovider.js",
-      this.file(
-        "providers/" + this.config.weatherAlertProvider.toLowerCase() + ".js"
-      ),
-    ];
+    return ["moment.js", "openweathermap.js"];
   },
 
   // Override getHeader method.
@@ -104,15 +118,10 @@ Module.register("MMM-WeatherAlerts", {
     }
 
     // Initialize the weather provider.
-    this.weatherAlertProvider = WeatherAlertProvider.initialize(
-      this.config.weatherAlertProvider,
-      this
-    );
+    this.weatherAlertProvider = new OpenWeatherMapProvider(this.config, this);
+    Log.info("Weather alert provider initialized: OpenWeatherMap");
 
-    // Let the weather provider know we are starting.
-    this.weatherAlertProvider.start();
-
-    // Add custom filterss
+    // Add custom filters
     this.addFilters();
 
     // Schedule the first update.
@@ -144,6 +153,43 @@ Module.register("MMM-WeatherAlerts", {
     }
   },
 
+  // Handle socket notifications from node_helper
+  socketNotificationReceived: function (notification, payload) {
+    if (notification === "WEATHER_ALERTS_DATA") {
+      // Only process if this is for our module instance
+      if (payload.identifier === this.identifier) {
+        // Resolve the promise with the data
+        if (this.fetchDataResolvers.length > 0) {
+          const { resolve } = this.fetchDataResolvers.shift();
+
+          // Parse XML if needed
+          if (payload.type === "xml") {
+            const parser = new DOMParser();
+            const data = parser.parseFromString(payload.data, "text/xml");
+            resolve(data);
+          } else {
+            resolve(payload.data);
+          }
+        }
+      }
+    } else if (notification === "FETCH_ERROR") {
+      // Only process if this is for our module instance
+      if (payload.identifier === this.identifier) {
+        Log.error("Error fetching weather alerts:", payload.error);
+        // Reject the promise with the error
+        if (this.fetchDataResolvers.length > 0) {
+          const { reject } = this.fetchDataResolvers.shift();
+          reject(new Error(payload.error));
+        }
+      }
+    }
+  },
+
+  // Add a resolver for a pending fetch request
+  addFetchDataResolver: function (resolve, reject) {
+    this.fetchDataResolvers.push({ resolve, reject });
+  },
+
   // Select the template depending on the display type.
   getTemplate: function () {
     switch (this.config.type.toLowerCase()) {
@@ -165,7 +211,15 @@ Module.register("MMM-WeatherAlerts", {
 
   // What to do when the weather alert provider has new information available?
   updateAvailable: function () {
-    Log.log("New weather alert information available.");
+    const alerts = this.weatherAlertProvider.currentWeatherAlerts();
+    Log.log(`New weather alert information available. Found ${alerts?.length || 0} alert(s).`);
+
+    if (alerts && alerts.length > 0) {
+      Log.log("Alert details:", alerts.map(a => ({ event: a.event, start: a.start, end: a.end })));
+    } else {
+      Log.log("No active alerts for this location. Module will remain hidden.");
+    }
+
     this.updateDom(0);
     this.scheduleUpdate();
 
